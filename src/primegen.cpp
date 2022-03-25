@@ -80,7 +80,7 @@ inline void gen_tables()
 
 // Code is faster if sieve_blk_size is a constant expression 
 template <uint32_t sieve_blk_size>
-uint64_t sieve_eval(const uint64_t p_max)
+static uint64_t sieve_evalT(const uint64_t p_max)
 {
 	const size_t r_size = (2 - 1) * (3 - 1) * (5 - 1) * (7 - 1);
 	const uint8_t r[r_size] = { 1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109,
@@ -198,6 +198,29 @@ uint64_t sieve_eval(const uint64_t p_max)
 	return prm_pi;
 }
 
+static uint64_t sieve_eval(const uint64_t p_max)
+{
+	uint64_t prm_pi = 0;
+	
+	// We must have p_max <= (sieve_blk_size * M)^2
+	const uint32_t sieve_blk_size = std::lrint(std::sqrt(double(p_max)) / M) + 1;
+
+	if      (sieve_blk_size <= (uint32_t(1) << 13)) prm_pi = sieve_evalT<uint32_t(1) << 13>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 14)) prm_pi = sieve_evalT<uint32_t(1) << 14>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 15)) prm_pi = sieve_evalT<uint32_t(1) << 15>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 16)) prm_pi = sieve_evalT<uint32_t(1) << 16>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 17)) prm_pi = sieve_evalT<uint32_t(1) << 17>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 18)) prm_pi = sieve_evalT<uint32_t(1) << 18>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 19)) prm_pi = sieve_evalT<uint32_t(1) << 19>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 20)) prm_pi = sieve_evalT<uint32_t(1) << 20>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 21)) prm_pi = sieve_evalT<uint32_t(1) << 21>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 22)) prm_pi = sieve_evalT<uint32_t(1) << 22>(p_max);
+	else if (sieve_blk_size <= (uint32_t(1) << 23)) prm_pi = sieve_evalT<uint32_t(1) << 23>(p_max);
+	else std::cerr << "p_max = " << double(p_max) << " is too large." << std::endl;
+
+	return prm_pi;
+}
+
 int main()
 {
 	std::cerr << "primegen: fast prime number list generator" << std::endl;
@@ -209,30 +232,19 @@ int main()
 
 	// Iterate p_max to check speed
 	const uint64_t e9 = uint64_t(1000000000);
-	for (uint64_t p_max = e9; p_max <= e9 * e9; p_max *= 10)
+	for (uint64_t p_max = e9; p_max <= 10 * e9 * e9; p_max *= 10)
 	{
-		// We must have p_max <= (sieve_blk_size * M)^2
-		const uint32_t sieve_blk_size = std::lrint(std::sqrt(double(p_max)) / M) + 1;
-
-		auto t0 = std::chrono::steady_clock::now();
+		const auto t0 = std::chrono::steady_clock::now();
 
 		// Compute the prime-counting function as an example 
-		uint64_t prm_pi = 0;
-		if      (sieve_blk_size <= (uint32_t(1) << 13)) prm_pi = sieve_eval<uint32_t(1) << 13>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 14)) prm_pi = sieve_eval<uint32_t(1) << 14>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 15)) prm_pi = sieve_eval<uint32_t(1) << 15>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 16)) prm_pi = sieve_eval<uint32_t(1) << 16>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 17)) prm_pi = sieve_eval<uint32_t(1) << 17>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 18)) prm_pi = sieve_eval<uint32_t(1) << 18>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 19)) prm_pi = sieve_eval<uint32_t(1) << 19>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 20)) prm_pi = sieve_eval<uint32_t(1) << 20>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 21)) prm_pi = sieve_eval<uint32_t(1) << 21>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 22)) prm_pi = sieve_eval<uint32_t(1) << 22>(p_max);
-		else if (sieve_blk_size <= (uint32_t(1) << 23)) prm_pi = sieve_eval<uint32_t(1) << 23>(p_max);
-		else std::cout << "p_max = " << double(p_max) << " is too large";
+		const uint64_t prm_pi = sieve_eval(p_max);
 
-		const double duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-		std::cout << ", number of primes: " << prm_pi << ", " << round(duration * 100) / 100 << " sec." << std::endl;
+		if (prm_pi != 0)
+		{
+			const double duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+			std::cout << ", number of primes: " << prm_pi << ", " << round(duration * 100) / 100 << " sec." << std::endl;
+		}
+		else break;
 	}
 
 	return EXIT_SUCCESS;
